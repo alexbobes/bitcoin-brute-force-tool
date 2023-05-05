@@ -27,8 +27,8 @@ This project is for educational purposes only. Using this software to access or 
 
 ## Usage
 
-1. Clone the repository: `git clone https://github.com/yourusername/bitcoin-bruteforce.git`
-2. Change to the project directory: `cd bitcoin-bruteforce`
+1. Clone the repository: `git clone https://github.com/alexbobes/bitcoin-brute-force-tool`
+2. Change to the project directory: `cd bitcoin-brute-force-tool`
 3. Ensure you have the necessary libraries installed: `pip install -r requirements.txt`
 4. Add the Bitcoin addresses you want to check for a match in a file named `wallets.txt`. Each address should be on a new line.
 5. Run the script: `python bruteforce.py`
