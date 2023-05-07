@@ -1,7 +1,8 @@
 from bit import Key
 from multiprocessing import cpu_count
 from requests import get
-from time import sleep, time
+from time import time, sleep
+import time as time_module
 from concurrent.futures import ThreadPoolExecutor
 import requests
 import json
@@ -22,24 +23,28 @@ def create_tables(conn):
 
 
 def send_slack_message(url, message, max_retries=30, retry_interval=5):
+    if not url or url == "None":
+        print("Slack webhook URL not set. Skipping sending message.")
+        return
+
     headers = {'Content-Type': 'application/json'}
     data = json.dumps({'text': message})
-    
+
     for retry in range(max_retries):
         try:
             response = requests.post(url, headers=headers, data=data)
             response.raise_for_status()
             break  # If successful, break the loop
         except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")  # Add this line to print the exception message
             if retry < max_retries - 1:
                 print(f"Failed to send Slack message. Retrying in {retry_interval} seconds... ({retry + 1}/{max_retries})")
-                time.sleep(retry_interval)
+                time_module.sleep(retry_interval)
             else:
                 print(f"Failed to send Slack message after {max_retries} attempts. Skipping...")
-                break
            
 
-send_slack_message("webhook_url", "Bitcoin Script started >")
+send_slack_message(webhook_url, "Bitcoin Script started >")
 
 with open('wallets.txt', 'r') as file:
     wallets = set(file.read().split('\n'))
@@ -106,15 +111,16 @@ def bruteforce_template(r, sep_p, func, debug=False):
             addresses_checked_last_30min = keys_generated - last_30min_keys_generated
             last_30min_keys_generated = keys_generated
             total_elapsed_time = current_time - start_time
-            hash_rate = keys_generated / total_elapsed_time
+            hash_rate_last_30min = addresses_checked_last_30min / elapsed_time_since_update
             conn = sqlite3.connect('progress.db')
             cur = conn.cursor()
-            cur.execute("INSERT INTO hash_rates (instance, hash_rate) VALUES (?, ?)", (r + 1, hash_rate))
+            cur.execute("INSERT INTO hash_rates (instance, hash_rate) VALUES (?, ?)", (r + 1, hash_rate_last_30min))
             conn.commit()
             last_update = current_time
-            message = f'Instance: {r + 1} - Checked {addresses_checked_last_30min} addresses in the past 30 minutes.\n'
-            message += f'Instance: {r + 1} - Checked {keys_generated} addresses in total.\n'
-            send_slack_message("webhook_url", message)
+            message = (f'Instance: {r + 1} - Checked {addresses_checked_last_30min} addresses in the past 30 minutes.\n'
+                       f'Instance: {r + 1} - Checked {keys_generated} addresses in total.\n'
+                       f'Instance: {r + 1} - Hash rate (last 30 minutes): {hash_rate_last_30min:.2f} keys/sec.\n')
+            send_slack_message(webhook_url, message)
 
     print(f'Instance: {r + 1}  - Done')
 
@@ -156,7 +162,7 @@ def OBF():
             save_to_wallet_database(pk.to_wif(), pk.address, balance)
             print(f'Instance: 1 - Added address to found.txt and wallet_database.txt')
             message = f'Instance: {r + 1} - Found address with a balance: {pk.address}'
-            send_slack_message("webhook_url", message)
+            send_slack_message(webhook_url, message)
         print('Sleeping for 10 seconds...')
         sleep(10)
 
