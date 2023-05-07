@@ -4,10 +4,13 @@ from requests import get
 from time import time, sleep
 import time as time_module
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
 import requests
 import json
 import sqlite3
 import os
+
+load_dotenv()
 
 webhook_url = os.getenv("SLACK_WEBHOOK_URL")
 
