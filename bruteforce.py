@@ -3,6 +3,43 @@ from multiprocessing import cpu_count
 from requests import get
 from time import sleep, time
 from concurrent.futures import ThreadPoolExecutor
+import requests
+import json
+import sqlite3
+import os
+
+webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+
+def create_tables(conn):
+    cur = conn.cursor()
+    cur.execute('''CREATE TABLE IF NOT EXISTS progress
+                   (id INTEGER PRIMARY KEY, instance INTEGER, value INTEGER)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS wallet_database
+                   (id INTEGER PRIMARY KEY, wif TEXT, address TEXT, balance REAL)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS hash_rates
+                   (id INTEGER PRIMARY KEY, instance INTEGER, hash_rate REAL, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit()
+
+
+def send_slack_message(url, message, max_retries=30, retry_interval=5):
+    headers = {'Content-Type': 'application/json'}
+    data = json.dumps({'text': message})
+    
+    for retry in range(max_retries):
+        try:
+            response = requests.post(url, headers=headers, data=data)
+            response.raise_for_status()
+            break  # If successful, break the loop
+        except requests.exceptions.RequestException as e:
+            if retry < max_retries - 1:
+                print(f"Failed to send Slack message. Retrying in {retry_interval} seconds... ({retry + 1}/{max_retries})")
+                time.sleep(retry_interval)
+            else:
+                print(f"Failed to send Slack message after {max_retries} attempts. Skipping...")
+                break
+           
+
+send_slack_message("webhook_url", "Bitcoin Script started >")
 
 with open('wallets.txt', 'r') as file:
     wallets = set(file.read().split('\n'))
@@ -12,16 +49,27 @@ with open('wallets.txt', 'r') as file:
 max_p = 115792089237316195423570985008687907852837564279074904382605163141518161494336
 
 def save_progress(instance, value):
-    with open(f'progress_{instance}.txt', 'w') as progress_file:
-        progress_file.write(str(value))
+    conn = sqlite3.connect("progress.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT OR REPLACE INTO progress (instance, value) VALUES (?, ?);
+    """, (instance, value))
+
+    conn.commit()
+    conn.close()
 
 def load_progress(instance):
-    try:
-        with open(f'progress_{instance}.txt', 'r') as progress_file:
-            progress_value = progress_file.read().strip()
-            return int(progress_value) if progress_value else None
-    except (FileNotFoundError, ValueError):
-        return Nonegit 
+    conn = sqlite3.connect("progress.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT value FROM progress WHERE instance = ?", (instance,))
+
+    result = cursor.fetchone()
+
+    conn.close()
+
+    return result[0] if result else None
 
 
 def save_to_wallet_database(wif, address, balance):
@@ -37,6 +85,7 @@ def bruteforce_template(r, sep_p, func, debug=False):
     keys_generated = 0
     start_time = time()
     last_update = start_time
+    last_30min_keys_generated = 0    
     
     while sint < mint:
         pk = func(sint)
@@ -53,12 +102,19 @@ def bruteforce_template(r, sep_p, func, debug=False):
         keys_generated += 1
         current_time = time()
         elapsed_time_since_update = current_time - last_update
-        if elapsed_time_since_update >= 60:
+        if elapsed_time_since_update >= 1800:  # Check every 30 minutes
+            addresses_checked_last_30min = keys_generated - last_30min_keys_generated
+            last_30min_keys_generated = keys_generated
             total_elapsed_time = current_time - start_time
             hash_rate = keys_generated / total_elapsed_time
-            with open(f'hash_rate_{r}.txt', 'w') as hash_rate_file:
-                hash_rate_file.write(f'Instance: {r + 1} - Hash rate: {hash_rate:.2f} keys/s\n')
+            conn = sqlite3.connect('progress.db')
+            cur = conn.cursor()
+            cur.execute("INSERT INTO hash_rates (instance, hash_rate) VALUES (?, ?)", (r + 1, hash_rate))
+            conn.commit()
             last_update = current_time
+            message = f'Instance: {r + 1} - Checked {addresses_checked_last_30min} addresses in the past 30 minutes.\n'
+            message += f'Instance: {r + 1} - Checked {keys_generated} addresses in total.\n'
+            send_slack_message("webhook_url", message)
 
     print(f'Instance: {r + 1}  - Done')
 
@@ -99,11 +155,15 @@ def OBF():
                 result.write(f'{pk.to_wif()}')
             save_to_wallet_database(pk.to_wif(), pk.address, balance)
             print(f'Instance: 1 - Added address to found.txt and wallet_database.txt')
+            message = f'Instance: {r + 1} - Found address with a balance: {pk.address}'
+            send_slack_message("webhook_url", message)
         print('Sleeping for 10 seconds...')
         sleep(10)
 
 
 def main():
+    conn = sqlite3.connect('progress.db')
+    create_tables(conn)
     mode = (None, RBF, TBF, OTBF, OBF, debug_RBF, debug_TBF, debug_OTBF)
 
     menu_string = 'Select bruteforce mode:\n'

@@ -17,7 +17,8 @@ This project is for educational purposes only. Using this software to access or 
 - Supports debug modes for each brute force mode
 - Automatically saves progress and hash rate information
 - Save and load progress for each instance, allowing you to resume from where you left off
-- Saves found addresses and balances to a wallet database
+- Saves found addresses and balances to a wallet database (SQLite)
+- Sends notifications to Slack with information about the script's progress, such as the number of addresses checked in the last 30 minutes and the total number of addresses checked
 
 ## Requirements
 
@@ -33,6 +34,7 @@ This project is for educational purposes only. Using this software to access or 
 4. Add the Bitcoin addresses you want to check for a match in a file named `wallets.txt`. Each address should be on a new line.
 5. Run the script: `python bruteforce.py`
 6. Follow the prompts to select the desired brute force mode and number of CPU cores to use.
+7. To send Slack notifications, set your Slack webhook URL in the .env file. Replace YOUR_SLACK_WEBHOOK_URL with your actual webhook URL.
 
 ## Contributing
 
