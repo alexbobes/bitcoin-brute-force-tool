@@ -18,7 +18,7 @@ This project is for educational purposes only. Using this software to access or 
 - Automatically saves progress and hash rate information
 - Save and load progress for each instance, allowing you to resume from where you left off
 - Saves found addresses and balances to a wallet database (SQLite)
-- Sends notifications to Slack with information about the script's progress, such as the number of addresses checked in the last 30 minutes and the total number of addresses checked
+- Sends notifications to Slack with information about the script's progress, such as the number of addresses checked in the last 30 minutes, the total number of addresses checked and the hash rate in the last 30 minutes
 
 ## Requirements
 
