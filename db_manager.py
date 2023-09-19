@@ -93,34 +93,39 @@ def create_tables():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            with conn.cursor() as cur:
-                cur.execute('''
-                CREATE TABLE IF NOT EXISTS progress (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    instance INT NOT NULL,
-                    value BIGINT NOT NULL
-                );
-                ''')
-                cur.execute('''
-                CREATE TABLE IF NOT EXISTS wallet_database (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    wif TEXT NOT NULL,
-                    address TEXT NOT NULL,
-                    balance REAL NOT NULL
-                );
-                ''')
-                cur.execute('''
-                CREATE TABLE IF NOT EXISTS hash_rates (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    instance INT NOT NULL,
-                    hash_rate REAL NOT NULL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                ''')
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS progress (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                instance INT NOT NULL,
+                value BIGINT NOT NULL
+            );
+            ''')
+
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS wallet_database (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                wif TEXT NOT NULL,
+                address TEXT NOT NULL,
+                balance REAL NOT NULL
+            );
+            ''')
+
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS hash_rates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                instance INT NOT NULL,
+                hash_rate REAL NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            ''')
+
+            cur.execute("SHOW COLUMNS FROM progress LIKE 'updated_at'")
+            if not cur.fetchone():
                 cur.execute('''
                 ALTER TABLE progress ADD COLUMN updated_at DATE DEFAULT CURRENT_DATE
                 ''')
-                conn.commit()
+            
+            conn.commit()
     finally:
         conn.close()
 

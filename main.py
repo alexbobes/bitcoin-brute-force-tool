@@ -1,6 +1,6 @@
 import logging
 from bruteforcer import RBF, TBF, OTBF, OBF, debug_RBF, debug_TBF, debug_OTBF
-from db_manager import test_address_insertion
+from db_manager import test_address_insertion, create_tables
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor
 
@@ -31,6 +31,7 @@ def print_menu():
     print(menu_string)
 
 def main():
+    create_tables()
     print_menu()
     choice = get_user_choice()
 
@@ -39,9 +40,9 @@ def main():
         return
     option = choice
 
-    if option == 4:  # If user chose OBF
+    if option == 4: 
         cpu_cores = 1
-    elif 0 < option < len(mode) - 1:  # If user chose any other bruteforce mode
+    elif 0 < option < len(mode) - 1:  
         print(f'How many cores do you want to use ({cpu_count()} available)?')
         try:
             cpu_cores = int(input('> '))
@@ -53,7 +54,7 @@ def main():
         except ValueError:
             print("Invalid input. Not a valid integer. Using all available cores.")
             cpu_cores = cpu_count()
-    else:  # For 'Exit' or any other unexpected input
+    else: 
         option = 0
         cpu_cores = 0
 
@@ -75,5 +76,4 @@ if __name__ == '__main__':
     except Exception as e:
         logging.error(f"Error: {e}")
     finally:
-        # Cleanup code, if any. For example, close DB connections or any open files.
         pass
