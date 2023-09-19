@@ -15,26 +15,32 @@ This project is for educational purposes only. Using this software to access or 
   - Online brute force (OBF) with API rate limiting
 - Utilizes multiprocessing to take advantage of multiple CPU cores
 - Supports debug modes for each brute force mode
-- Automatically saves progress and hash rate information
+- Automatically saves progress and hash rate information to a MySQL database
 - Save and load progress for each instance, allowing you to resume from where you left off
-- Saves found addresses and balances to a wallet database (SQLite)
-- Sends notifications to Slack with information about the script's progress, such as the number of addresses checked in the last 30 minutes, the total number of addresses checked and the hash rate in the last 30 minutes
+- Saves found addresses and balances to both a text file and MySQL database
+- Sends notifications to Slack with information about the script's progress, such as the number of addresses checked in the last 30 minutes, the total number of addresses checked, and the hash rate in the last 30 minutes
 
 ## Requirements
 
 - Python 3.6 or higher
 - [bit](https://github.com/ofek/bit) library: `pip install bit`
 - [requests](https://docs.python-requests.org/en/master/) library: `pip install requests`
+- [mysql-connector-python](https://pypi.org/project/mysql-connector-python/): `pip install mysql-connector-python`
+- `.env` file with appropriate database and Slack webhook configurations
 
 ## Usage
 
 1. Clone the repository: `git clone https://github.com/alexbobes/bitcoin-brute-force-tool`
 2. Change to the project directory: `cd bitcoin-brute-force-tool`
-3. Ensure you have the necessary libraries installed: `pip install -r requirements.txt`
-4. Add the Bitcoin addresses you want to check for a match in a file named `wallets.txt`. Each address should be on a new line.
-5. Run the script: `python bruteforce.py`
-6. Follow the prompts to select the desired brute force mode and number of CPU cores to use.
-7. To send Slack notifications, set your Slack webhook URL in the .env file. Replace YOUR_SLACK_WEBHOOK_URL with your actual webhook URL.
+3. Create a virtual environment: `python -m venv btc`
+4. Activate the virtual environment: 
+   - On macOS and Linux: `source btc/bin/activate`
+   - On Windows: `btc\Scripts\activate`
+5. Ensure you have the necessary libraries installed: `pip install -r requirements.txt`
+6. Add the Bitcoin addresses you want to check for a match in a file named `wallets.txt`. Each address should be on a new line.
+7. Run the script: `python main.py`
+8. Follow the prompts to select the desired brute force mode and number of CPU cores to use.
+9. To send Slack notifications, set your Slack webhook URL in the `.env` file. Replace YOUR_SLACK_WEBHOOK_URL with your actual webhook URL. Also, configure the database settings in the same file.
 
 ## Contributing
 

@@ -1,3 +1,6 @@
 wallets.txt
 .env
 progress.db
+btc/
+.DS_Store
+__pycache__/

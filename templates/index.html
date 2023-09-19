@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bruteforcer Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Bruteforcer Statistics</h1>
+    <p>Total addresses processed: {{ total_addresses }}</p>
+    <p>Total addresses found: {{ total_found }}</p>
+    <!-- Add more stats as needed -->
+    <canvas id="myChart"></canvas>
+    <h2>Daily Statistics</h2>
+    <canvas id="dailyChart"></canvas>
+    <script>
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Total Addresses', 'Found Addresses'],
+                datasets: [{
+                    label: '# of Addresses',
+                    data: [{{ total_addresses }}, {{ total_found }}],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        function updateDailyStats() {
+            fetch('/api/addresses-by-day')
+                .then(response => response.json())
+                .then(data => {
+                    const labels = data.map(item => item.date);
+                    const counts = data.map(item => item.count);
+                    
+                    var dailyCtx = document.getElementById('dailyChart').getContext('2d');
+                    var dailyChart = new Chart(dailyCtx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '# of Addresses Processed Daily',
+                                data: counts,
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                });
+        }
+
+        setInterval(updateDailyStats, 5000);  // Fetch every 5 seconds
+    </script>
+</body>
+</html>
