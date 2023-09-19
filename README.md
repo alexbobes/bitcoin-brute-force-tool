@@ -30,7 +30,7 @@ This project is for educational purposes only. Using this software to access or 
 1. Clone the repository: `git clone https://github.com/alexbobes/bitcoin-brute-force-tool`
 2. Change to the project directory: `cd bitcoin-brute-force-tool`
 3. Ensure you have the necessary libraries installed: `pip install -r requirements.txt`
-4. To run the brute force script: `python bruteforce.py`
+4. To run the brute force script: `python main.py`
 5. To run the Flask web interface for real-time monitoring: `python app.py`
 6. Access the web interface via `http://localhost:5000/`
 7. To send Slack notifications, set your Slack webhook URL in the .env file. Replace YOUR_SLACK_WEBHOOK_URL with your actual webhook URL.
