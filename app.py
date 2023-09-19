@@ -1,6 +1,12 @@
 from flask import Flask, render_template, jsonify
 from db_manager import get_total_addresses_by_day
 import db_manager
+from dotenv import load_dotenv
+import logging
+
+load_dotenv()
+
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 

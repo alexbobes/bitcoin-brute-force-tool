@@ -1,6 +1,6 @@
 # Bitcoin Brute Force Tool
 
-This repository contains a Python script that attempts to brute force Bitcoin private keys to find matching addresses. This project is for educational purposes only and should not be used for any illegal activities.
+This repository contains a Python script that attempts to brute force Bitcoin private keys to find matching addresses. It also provides a Flask web interface for real-time monitoring of the brute force process. This project is for educational purposes only and should not be used for any illegal activities.
 
 ## Disclaimer
 
@@ -19,28 +19,21 @@ This project is for educational purposes only. Using this software to access or 
 - Save and load progress for each instance, allowing you to resume from where you left off
 - Saves found addresses and balances to a MySQL database
 - Sends notifications to Slack with information about the script's progress, such as the number of addresses checked in the last 30 minutes, the total number of addresses checked, and the hash rate in the last 30 minutes
+- Flask-based web interface for real-time monitoring of the brute force process, including statistics on the number of addresses tried.
 
 ## Requirements
 
 - Python 3.6 or higher
-- [bit](https://github.com/ofek/bit) library: `pip install bit`
-- [requests](https://docs.python-requests.org/en/master/) library: `pip install requests`
-- [mysql-connector-python](https://pypi.org/project/mysql-connector-python/): `pip install mysql-connector-python`
-
-## Setup
-
-1. Ensure you have a running MySQL server.
-2. Set up your database credentials in the `.env` file.
 
 ## Usage
 
 1. Clone the repository: `git clone https://github.com/alexbobes/bitcoin-brute-force-tool`
 2. Change to the project directory: `cd bitcoin-brute-force-tool`
 3. Ensure you have the necessary libraries installed: `pip install -r requirements.txt`
-4. Add the Bitcoin addresses you want to check for a match to the `wallets` table in your MySQL database.
-5. Run the script: `python main.py`
-6. Follow the prompts to select the desired brute force mode and number of CPU cores to use.
-7. To send Slack notifications, set your Slack webhook URL in the `.env` file. Replace `YOUR_SLACK_WEBHOOK_URL` with your actual webhook URL.
+4. To run the brute force script: `python bruteforce.py`
+5. To run the Flask web interface for real-time monitoring: `python app.py`
+6. Access the web interface via `http://localhost:5000/`
+7. To send Slack notifications, set your Slack webhook URL in the .env file. Replace YOUR_SLACK_WEBHOOK_URL with your actual webhook URL.
 
 ## Contributing
 

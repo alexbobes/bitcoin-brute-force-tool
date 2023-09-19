@@ -21,7 +21,7 @@ db_pool = None
 def initialize_pool():
     global db_pool
     try:
-        db_pool = pooling.MySQLConnectionPool(pool_name="bitcoin_pool", pool_size=5, **db_config)
+        db_pool = pooling.MySQLConnectionPool(pool_name="bitcoin_pool", pool_size=20, **db_config)
         logging.info("DB pool initialized successfully.")
     except mysql.connector.Error as e:
         logging.error(f"Error initializing DB pool: {e}")
@@ -36,6 +36,8 @@ def get_db_connection():
         initialize_pool()
     try:
         conn = db_pool.get_connection()
+        logging.debug(f"DB Config: {db_config}")
+        logging.debug(f"Connection object: {conn}")
         if not conn:
             logging.error("Received None connection from the pool!")
             raise mysql.connector.PoolError("Received None connection from the pool!")
@@ -51,12 +53,12 @@ def retry_on_db_fail(max_retries=5, delay=2):
             for _ in range(max_retries):
                 try:
                     return func(*args, **kwargs)
-                except (mysql.connector.PoolError, AttributeError) as e:  # Add AttributeError to handled exceptions
-                    if 'queue is full' in str(e) or 'NoneType' in str(e):  # Handle the NoneType error
+                except (mysql.connector.PoolError, AttributeError) as e: 
+                    if 'queue is full' in str(e) or 'NoneType' in str(e): 
                         logging.warning(f"DB Pool Error: {e}. Retrying in {delay} seconds...")
                         time.sleep(delay)
                     else:
-                        raise  # If it's another exception, just raise it
+                        raise  
             logging.error(f"Failed to get a DB connection after {max_retries} attempts.")
             raise mysql.connector.PoolError("Max retries reached for database connection.")
         return wrapper
@@ -226,23 +228,25 @@ def insert_hash_rate(instance, hash_rate):
 def get_total_addresses():
     """Return total number of addresses processed."""
     conn = get_db_connection()
+    cur = conn.cursor()
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM progress")
-            result = cur.fetchone()
-            return result[0] if result else 0
+        cur.execute("SELECT COUNT(*) FROM progress")
+        result = cur.fetchone()
+        return result[0] if result else 0
     finally:
+        cur.close()
         conn.close()
 
 @retry_on_db_fail()
 def get_total_found_addresses():
     """Return total number of found addresses."""
-    conn = get_db_connection()
+    conn = get_db_connection()  
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM wallet_database")
-            result = cur.fetchone()
-            return result[0] if result else 0
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM wallet_database")
+        result = cur.fetchone()
+        cur.close()
+        return result[0] if result else 0
     finally:
         conn.close()
 
@@ -250,15 +254,16 @@ def get_total_found_addresses():
 def get_total_addresses_by_day():
     """Return total number of addresses processed by day."""
     conn = get_db_connection()
+    cur = conn.cursor()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT updated_at, SUM(value) 
-                FROM progress 
-                GROUP BY updated_at
-                ORDER BY updated_at DESC
-            """)
-            result = cur.fetchall()
-            return [{"date": row[0], "count": row[1]} for row in result]
+        cur.execute("""
+            SELECT updated_at, SUM(value) 
+            FROM progress 
+            GROUP BY updated_at
+            ORDER BY updated_at DESC
+        """)
+        result = cur.fetchall()
+        return [{"date": row[0], "count": row[1]} for row in result]
     finally:
+        cur.close()
         conn.close()
