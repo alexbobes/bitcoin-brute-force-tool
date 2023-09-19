@@ -38,7 +38,7 @@ This project is for educational purposes only. Using this software to access or 
 2. Change to the project directory: `cd bitcoin-brute-force-tool`
 3. Ensure you have the necessary libraries installed: `pip install -r requirements.txt`
 4. Add the Bitcoin addresses you want to check for a match to the `wallets` table in your MySQL database.
-5. Run the script: `python bruteforce.py`
+5. Run the script: `python main.py`
 6. Follow the prompts to select the desired brute force mode and number of CPU cores to use.
 7. To send Slack notifications, set your Slack webhook URL in the `.env` file. Replace `YOUR_SLACK_WEBHOOK_URL` with your actual webhook URL.
 

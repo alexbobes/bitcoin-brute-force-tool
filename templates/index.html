@@ -5,18 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bruteforcer Stats</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+    </style>
 </head>
 <body>
     <h1>Bruteforcer Statistics</h1>
     <p>Total addresses processed: {{ total_addresses }}</p>
     <p>Total addresses found: {{ total_found }}</p>
-    <!-- Add more stats as needed -->
+    <h2>Overall Statistics</h2>
     <canvas id="myChart"></canvas>
     <h2>Daily Statistics</h2>
     <canvas id="dailyChart"></canvas>
+
     <script>
-        var ctx = document.getElementById('myChart').getContext('2d');
-        var myChart = new Chart(ctx, {
+        var overallChart = new Chart(document.getElementById('myChart').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: ['Total Addresses', 'Found Addresses'],
@@ -42,35 +48,35 @@
                 }
             }
         });
-        
+
+        var dailyChart = new Chart(document.getElementById('dailyChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '# of Addresses Processed Daily',
+                    data: [],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
         function updateDailyStats() {
             fetch('/api/addresses-by-day')
                 .then(response => response.json())
                 .then(data => {
-                    const labels = data.map(item => item.date);
-                    const counts = data.map(item => item.count);
-                    
-                    var dailyCtx = document.getElementById('dailyChart').getContext('2d');
-                    var dailyChart = new Chart(dailyCtx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: '# of Addresses Processed Daily',
-                                data: counts,
-                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            }
-                        }
-                    });
+                    dailyChart.data.labels = data.map(item => item.date);
+                    dailyChart.data.datasets[0].data = data.map(item => item.count);
+                    dailyChart.update();
                 });
         }
 
