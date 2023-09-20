@@ -5,6 +5,7 @@ from bit import Key
 import time
 from dotenv import load_dotenv
 from mysql.connector import pooling
+import logging
 
 load_dotenv()
 
@@ -15,7 +16,6 @@ db_config = {
   "database": os.getenv("DB_NAME"),
   "buffered": True
 }
-
 db_pool = None
 
 def initialize_pool():
@@ -257,13 +257,28 @@ def get_total_addresses_by_day():
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT updated_at, SUM(value) 
+            SELECT DATE(updated_at) as updated_day, SUM(value) 
             FROM progress 
-            GROUP BY updated_at
-            ORDER BY updated_at DESC
+            GROUP BY DATE(updated_at)
+            ORDER BY DATE(updated_at) DESC
         """)
         result = cur.fetchall()
-        return [{"date": row[0], "count": row[1]} for row in result]
+        return [{"date": row[0].strftime('%Y-%m-%d'), "count": row[1]} for row in result]
+    except Exception as e:
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+@retry_on_db_fail()
+def get_total_addresses_to_bruteforce():
+    """Return total number of addresses to be bruteforced."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM wallets") 
+        result = cur.fetchone()
+        return result[0] if result else 0
     finally:
         cur.close()
         conn.close()

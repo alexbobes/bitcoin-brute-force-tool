@@ -5,30 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bruteforcer Stats</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>Bruteforcer Statistics</h1>
-    <p>Total addresses processed: {{ total_addresses }}</p>
-    <p>Total addresses found: {{ total_found }}</p>
-    <h2>Overall Statistics</h2>
-    <canvas id="myChart"></canvas>
-    <h2>Daily Statistics</h2>
-    <canvas id="dailyChart"></canvas>
-
+    <div class="container">
+        <h1>Bruteforcer Statistics</h1>
+        <p id="totalAddresses">Total addresses processed: {{ total_addresses|human_format }}</p>
+        <p>Total addresses found: {{ total_found }}</p>
+        <h2>Overall Statistics</h2>
+        <canvas id="myChart" width="200px"></canvas>
+        <h2>Daily Statistics</h2>
+        <canvas id="dailyChart" width="200px"></canvas>
+    </div>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
     <script>
         var overallChart = new Chart(document.getElementById('myChart').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: ['Total Addresses', 'Found Addresses'],
+                labels: ['Total Wallet Addresses', 'Total Addresses Tried', 'Found Addresses'],
                 datasets: [{
                     label: '# of Addresses',
-                    data: [{{ total_addresses }}, {{ total_found }}],
+                    data: [{{ total_addresses_to_bruteforce }}, {{ total_addresses }}, {{ total_found }}],
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.2)',
                         'rgba(54, 162, 235, 0.2)'
@@ -48,38 +45,6 @@
                 }
             }
         });
-
-        var dailyChart = new Chart(document.getElementById('dailyChart').getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: '# of Addresses Processed Daily',
-                    data: [],
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        function updateDailyStats() {
-            fetch('/api/addresses-by-day')
-                .then(response => response.json())
-                .then(data => {
-                    dailyChart.data.labels = data.map(item => item.date);
-                    dailyChart.data.datasets[0].data = data.map(item => item.count);
-                    dailyChart.update();
-                });
-        }
-        setInterval(updateDailyStats, 10000); 
     </script>
 </body>
 </html>
