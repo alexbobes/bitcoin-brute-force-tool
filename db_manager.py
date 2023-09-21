@@ -251,26 +251,6 @@ def get_total_found_addresses():
         conn.close()
 
 @retry_on_db_fail()
-def get_total_addresses_by_day():
-    """Return total number of addresses processed by day."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT DATE(updated_at) as updated_day, SUM(value) 
-            FROM progress 
-            GROUP BY DATE(updated_at)
-            ORDER BY DATE(updated_at) DESC
-        """)
-        result = cur.fetchall()
-        return [{"date": row[0].strftime('%Y-%m-%d'), "count": row[1]} for row in result]
-    except Exception as e:
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-@retry_on_db_fail()
 def get_total_addresses_to_bruteforce():
     """Return total number of addresses to be bruteforced."""
     conn = get_db_connection()

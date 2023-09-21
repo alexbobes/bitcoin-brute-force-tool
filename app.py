@@ -1,6 +1,5 @@
 from flask import Flask, render_template, jsonify, stream_with_context, Response
-from db_manager import (get_total_addresses, get_total_found_addresses,
-                        get_total_addresses_by_day, get_total_addresses_to_bruteforce)
+from db_manager import (get_total_addresses, get_total_found_addresses, get_total_addresses_to_bruteforce)
 import logging
 from flask_bootstrap import Bootstrap
 import json
@@ -19,20 +18,6 @@ def index():
     total_addresses_to_bruteforce = get_total_addresses_to_bruteforce()
     
     return render_template('index.html', total_addresses=total_addresses, total_found=total_found, total_addresses_to_bruteforce=total_addresses_to_bruteforce)
-
-@app.route('/api/addresses-by-day', methods=['GET'])
-def addresses_by_day_stream():
-
-    def datetime_to_string(dt):
-        return dt.strftime('%Y-%m-%d')
-
-    def generate():
-        while True:
-            data = get_total_addresses_by_day()
-            yield f"data: {json.dumps(data, default=datetime_to_string)}\n\n"
-            sleep(10)
-
-    return Response(stream_with_context(generate()), content_type='text/event-stream')
 
 @app.route('/api/total-addresses', methods=['GET'])
 def total_addresses():
