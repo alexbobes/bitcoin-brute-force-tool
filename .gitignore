@@ -4,3 +4,5 @@ progress.db
 btc/
 .DS_Store
 __pycache__/
+CLAUDE.MD
+venvbtcbr/

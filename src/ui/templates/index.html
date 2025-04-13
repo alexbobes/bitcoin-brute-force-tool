@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bruteforcer Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Bruteforcer Statistics</h1>
+        <p id="totalAddresses">Total addresses processed: {{ total_addresses|human_format }}</p>
+        <p>Total addresses found: {{ total_found }}</p>
+        <h2>Overall Statistics</h2>
+        <canvas id="myChart" width="200px"></canvas>
+    </div>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <script>
+        var overallChart = new Chart(document.getElementById('myChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Total Wallet Addresses', 'Total Addresses Tried', 'Found Addresses'],
+                datasets: [{
+                    label: '# of Addresses',
+                    data: [{{ total_addresses_to_bruteforce }}, {{ total_addresses }}, {{ total_found }}],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
