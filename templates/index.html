@@ -3,46 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bruteforcer Stats</title>
+    <title>Bitcoin Brute Force Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>Bruteforcer Statistics</h1>
-        <p id="totalAddresses">Total addresses processed: {{ total_addresses|human_format }}</p>
-        <p>Total addresses found: {{ total_found }}</p>
-        <h2>Overall Statistics</h2>
-        <canvas id="myChart" width="200px"></canvas>
+    <div class="dashboard">
+        <header class="dashboard-header">
+            <h1><i class="fab fa-bitcoin"></i> Bitcoin Brute Force Dashboard</h1>
+            <div class="last-update">Last updated: <span id="lastUpdate">Just now</span></div>
+        </header>
+
+        <div class="stats-cards">
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-database"></i></div>
+                <div class="card-content">
+                    <h3>Wallet Database</h3>
+                    <div class="card-value" id="totalAddressesToBruteforce">{{ total_addresses_to_bruteforce|human_format }}</div>
+                    <div class="card-label">Total Wallet Addresses</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="card-content">
+                    <h3>Processed</h3>
+                    <div class="card-value" id="totalAddresses">{{ total_addresses|human_format }}</div>
+                    <div class="card-label">Addresses Checked</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-key"></i></div>
+                <div class="card-content">
+                    <h3>Found</h3>
+                    <div class="card-value" id="totalFound">{{ total_found|human_format }}</div>
+                    <div class="card-label">Wallet Matches</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-tachometer-alt"></i></div>
+                <div class="card-content">
+                    <h3>Performance</h3>
+                    <div class="card-value" id="hashRate">{{ hash_rate|default('0.00', true) }} keys/sec</div>
+                    <div class="card-label">Keys/second</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2>Overall Statistics</h2>
+                <div class="chart-controls">
+                    <button id="showBarChart" class="active"><i class="fas fa-chart-bar"></i></button>
+                    <button id="showLineChart"><i class="fas fa-chart-line"></i></button>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <div class="stats-detail">
+            <div class="progress-container">
+                <h2>Progress Tracker</h2>
+                <div class="progress-bar">
+                    <div class="progress-value" id="progressBar" style="width: {{ ((total_addresses / total_addresses_to_bruteforce * 100) if total_addresses_to_bruteforce > 0 else 0)|round(2) }}%"></div>
+                </div>
+                <div class="progress-stats">
+                    <div><span id="progressPercent">{{ ((total_addresses / total_addresses_to_bruteforce * 100) if total_addresses_to_bruteforce > 0 else 0)|round(2) }}%</span> Complete</div>
+                    <div><span id="progressETA">Calculating...</span> Estimated Time Remaining</div>
+                </div>
+            </div>
+            
+            <div class="status-log">
+                <h2>Status Log</h2>
+                <div class="log-entries" id="statusLog">
+                    <div class="log-entry">
+                        <span class="timestamp">{{ '{:%Y-%m-%d %H:%M:%S}'.format(now) }}</span>
+                        <span class="message">System initialized, starting address processing</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
     <script>
-        var overallChart = new Chart(document.getElementById('myChart').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: ['Total Wallet Addresses', 'Total Addresses Tried', 'Found Addresses'],
-                datasets: [{
-                    label: '# of Addresses',
-                    data: [{{ total_addresses_to_bruteforce }}, {{ total_addresses }}, {{ total_found }}],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(54, 162, 235, 0.2)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)'
-                    ],
-                    borderWidth: 1
-                }]
+        // Initialize charts
+        let chartType = 'bar';
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        
+        const chartData = {
+            labels: ['Total Wallet Addresses', 'Total Addresses Tried', 'Found Addresses'],
+            datasets: [{
+                label: '# of Addresses',
+                data: [
+                    {{ total_addresses_to_bruteforce if total_addresses_to_bruteforce is not none else 0 }}, 
+                    {{ total_addresses if total_addresses is not none else 0 }}, 
+                    {{ total_found if total_found is not none else 0 }}
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.2)',
+                    'rgba(75, 192, 192, 0.2)',
+                    'rgba(255, 99, 132, 0.2)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 99, 132, 1)'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return humanFormat(value);
+                        }
+                    }
+                }
             },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + humanFormat(context.raw);
+                        }
                     }
                 }
             }
+        };
+        
+        const mainChart = new Chart(ctx, {
+            type: chartType,
+            data: chartData,
+            options: chartOptions
         });
+        
+        // Event listeners for chart type switching
+        document.getElementById('showBarChart').addEventListener('click', function() {
+            if (chartType !== 'bar') {
+                chartType = 'bar';
+                updateChartType();
+                toggleActiveButton(this);
+            }
+        });
+        
+        document.getElementById('showLineChart').addEventListener('click', function() {
+            if (chartType !== 'line') {
+                chartType = 'line';
+                updateChartType();
+                toggleActiveButton(this);
+            }
+        });
+        
+        function updateChartType() {
+            mainChart.destroy();
+            mainChart = new Chart(ctx, {
+                type: chartType,
+                data: chartData,
+                options: chartOptions
+            });
+        }
+        
+        function toggleActiveButton(button) {
+            document.querySelectorAll('.chart-controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+        }
     </script>
 </body>
 </html>
