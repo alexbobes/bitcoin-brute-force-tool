@@ -7,6 +7,8 @@ import os
 import logging
 import requests
 import multiprocessing
+import threading
+from queue import Queue
 from time import sleep, time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -16,7 +18,8 @@ from bit import Key
 # Import from project modules
 from src.database.db_manager import (
     address_exists_in_db, check_addresses_batch, save_to_wallet_database, 
-    batch_save_to_wallet_database, save_progress, load_progress, insert_hash_rate
+    batch_save_to_wallet_database, save_progress, load_progress, insert_hash_rate,
+    update_daily_stats, initialize_session_tracking, finalize_session_tracking
 )
 from src.notifications.notification_manager import send_slack_message
 from src.notifications.telegram_notifier import (
@@ -57,6 +60,18 @@ def bruteforce_template(r, sep_p, func, debug=False, mode_name=None, total_cores
         # Get the caller's name (RBF, TBF, etc.)
         frame = inspect.currentframe().f_back
         mode_name = frame.f_code.co_name
+    
+    # Simple session tracking initialization
+    session_id = None
+    try:
+        session_id = initialize_session_tracking()
+        if session_id:
+            logging.info(f"Session tracking active with ID: {session_id}")
+        else:
+            logging.warning("Failed to initialize session tracking, continuing without it")
+    except Exception as e:
+        logging.error(f"Error initializing session tracking: {e}")
+        # Continue anyway, session tracking is non-critical
     
     instance_id = r + 1
     keys_processed = 0
@@ -235,6 +250,14 @@ def bruteforce_template(r, sep_p, func, debug=False, mode_name=None, total_cores
             last_30min_keys_generated = keys_generated
             hash_rate_last_30min = addresses_checked_last_30min / elapsed_time_since_update
             insert_hash_rate(instance_id, hash_rate_last_30min)
+            
+            # Simple and non-blocking update call
+            try:
+                update_daily_stats()
+            except Exception as e:
+                logging.error(f"Error updating daily stats: {e}")
+                # Continue processing regardless of errors
+                
             last_update = current_time
             
             # Only send Slack message if webhook is configured
@@ -243,6 +266,14 @@ def bruteforce_template(r, sep_p, func, debug=False, mode_name=None, total_cores
                           f'Instance: {instance_id} - Checked {keys_generated:,} addresses in total.\n'
                           f'Instance: {instance_id} - Hash rate (last 30 minutes): {hash_rate_last_30min:.2f} keys/sec.\n')
                 send_slack_message(webhook_url, message)
+
+    # Simple session finalization
+    if session_id:
+        try:
+            finalize_session_tracking(session_id)
+            logging.info(f"Session {session_id} completed")
+        except Exception as e:
+            logging.error(f"Error finalizing session: {e}")
 
     print(f'Instance: {r + 1}  - Done')
 

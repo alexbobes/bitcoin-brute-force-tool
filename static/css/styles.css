@@ -135,6 +135,23 @@ body {
     margin-bottom: 30px;
 }
 
+.chart-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.chart-half {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .chart-row {
+        flex-direction: column;
+    }
+}
+
 .chart-header {
     display: flex;
     justify-content: space-between;
@@ -171,6 +188,10 @@ body {
 
 .chart-wrapper {
     height: 300px;
+}
+
+#dailyStatsContainer .chart-wrapper {
+    height: 400px;
 }
 
 /* Stats Detail Section */

@@ -1,11 +1,20 @@
 // Utility functions
 function humanFormat(number) {
-    let magnitude = 0;
-    while (Math.abs(number) >= 1000) {
-        magnitude += 1;
-        number /= 1000.0;
+    if (isNaN(number) || number === undefined) {
+        return '0';
     }
-    return number.toFixed(2) + ' ' + ['', 'K', 'M', 'B', 'T'][magnitude];
+    
+    let magnitude = 0;
+    let absNumber = Math.abs(number);
+    while (absNumber >= 1000) {
+        magnitude += 1;
+        absNumber /= 1000.0;
+    }
+    
+    const units = ['', 'K', 'M', 'B', 'T'];
+    const unit = units[magnitude] || '';
+    
+    return (number / Math.pow(1000, magnitude)).toFixed(2) + ' ' + unit;
 }
 
 function formatTimestamp() {
@@ -97,7 +106,11 @@ function updateDashboard() {
                 }
                 
                 // Update chart if it exists
-                if (typeof mainChart !== 'undefined') {
+                if (typeof window.mainChart !== 'undefined') {
+                    window.mainChart.data.datasets[0].data[1] = totalAddresses;
+                    window.mainChart.update();
+                } else if (typeof mainChart !== 'undefined') {
+                    // Fallback for mainChart defined in index.html
                     mainChart.data.datasets[0].data[1] = totalAddresses;
                     mainChart.update();
                 }
@@ -156,7 +169,11 @@ function updateDashboard() {
                 window.cachedTotalToBruteforce = totalToBruteforce;
                 
                 // Update chart
-                if (typeof mainChart !== 'undefined') {
+                if (typeof window.mainChart !== 'undefined') {
+                    window.mainChart.data.datasets[0].data[0] = totalToBruteforce;
+                    window.mainChart.update();
+                } else if (typeof mainChart !== 'undefined') {
+                    // Fallback for mainChart defined in index.html
                     mainChart.data.datasets[0].data[0] = totalToBruteforce;
                     mainChart.update();
                 }
@@ -238,7 +255,11 @@ function updateDashboard() {
                 window.cachedTotalFound = totalFound;
                 
                 // Update chart
-                if (typeof mainChart !== 'undefined') {
+                if (typeof window.mainChart !== 'undefined') {
+                    window.mainChart.data.datasets[0].data[2] = totalFound;
+                    window.mainChart.update();
+                } else if (typeof mainChart !== 'undefined') {
+                    // Fallback for mainChart defined in index.html
                     mainChart.data.datasets[0].data[2] = totalFound;
                     mainChart.update();
                 }
@@ -386,6 +407,456 @@ function fetchTotalFound() {
         });
 }
 
+// Function to create the daily stats chart initially
+function initDailyStatsChart() {
+    // Create empty chart at first
+    const chartCanvas = document.getElementById('dailyStatsChart');
+    if (!chartCanvas) {
+        console.error('Cannot find dailyStatsChart canvas element!');
+        return;
+    }
+    
+    const ctx = chartCanvas.getContext('2d');
+    
+    // Store chart in window object for global access
+    window.dailyStatsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Addresses Checked (per day)',
+                    data: [],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Addresses Found',
+                    data: [],
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y1'
+                },
+                {
+                    label: 'Hash Rate (keys/sec)',
+                    data: [],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y2'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Addresses Checked'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return humanFormat(value);
+                        }
+                    }
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Addresses Found'
+                    }
+                },
+                y2: {
+                    beginAtZero: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Hash Rate (keys/sec)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            
+                            if (label) {
+                                label += ': ';
+                            }
+                            
+                            if (context.datasetIndex === 0) {
+                                // For addresses checked
+                                label += humanFormat(context.raw);
+                            } else if (context.datasetIndex === 1) {
+                                // For addresses found
+                                label += context.raw;
+                            } else {
+                                // For hash rate
+                                label += context.raw.toFixed(2) + ' keys/sec';
+                            }
+                            
+                            return label;
+                        }
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Daily Progress Statistics'
+                }
+            }
+        }
+    });
+    
+    // Load initial data
+    updateDailyStatsChart();
+}
+
+// Function to update the daily stats chart with fresh data
+function updateDailyStatsChart() {
+    if (!window.dailyStatsChart) {
+        console.error('Daily stats chart not initialized!');
+        return;
+    }
+    
+    // Fetch daily stats data from API
+    fetch('/api/daily-stats?_=' + new Date().getTime())
+        .then(response => response.json())
+        .then(data => {
+            if (!data.daily_stats || !Array.isArray(data.daily_stats)) {
+                console.error('Invalid daily stats data:', data);
+                addLogEntry('Error: Could not load daily statistics');
+                return;
+            }
+            
+            // Process data for chart
+            const stats = data.daily_stats;
+            
+            // Sort by date ascending
+            stats.sort((a, b) => {
+                try {
+                    return new Date(a.date || 0) - new Date(b.date || 0);
+                } catch (e) {
+                    console.error('Error sorting dates:', e);
+                    return 0;
+                }
+            });
+            
+            // Extract data for chart
+            const labels = stats.map(item => {
+                if (!item.date) return 'Unknown';
+                try {
+                    const date = new Date(item.date);
+                    return date.toLocaleDateString();
+                } catch (e) {
+                    console.error('Invalid date:', item.date);
+                    return 'Invalid date';
+                }
+            });
+            
+            // Calculate addresses checked per day (difference from previous day)
+            const addressesChecked = [];
+            for (let i = 0; i < stats.length; i++) {
+                if (i === 0) {
+                    addressesChecked.push(Number(stats[i].addresses_checked));
+                } else {
+                    const todayChecked = Number(stats[i].addresses_checked);
+                    const yesterdayChecked = Number(stats[i-1].addresses_checked);
+                    addressesChecked.push(todayChecked - yesterdayChecked);
+                }
+            }
+            
+            const addressesFound = stats.map(item => Number(item.addresses_found) || 0);
+            const hashRates = stats.map(item => {
+                const rate = Number(item.avg_hash_rate);
+                return isNaN(rate) ? 0 : rate;
+            });
+            
+            // Update chart data
+            if (window.dailyStatsChart) {
+                window.dailyStatsChart.data.labels = labels;
+                window.dailyStatsChart.data.datasets[0].data = addressesChecked;
+                window.dailyStatsChart.data.datasets[1].data = addressesFound;
+                window.dailyStatsChart.data.datasets[2].data = hashRates;
+                
+                // Update chart
+                window.dailyStatsChart.update();
+            } else {
+                console.error('Chart not available during update');
+            }
+            
+            addLogEntry(`Loaded daily statistics for ${labels.length} days`);
+        })
+        .catch(error => {
+            console.error('Error fetching daily stats:', error);
+            addLogEntry('Error loading daily statistics: ' + error.message);
+        });
+}
+
+// Function to create daily keys checked chart
+function initDailyKeysChart() {
+    const chartCanvas = document.getElementById('dailyKeysChart');
+    if (!chartCanvas) {
+        console.error('Cannot find dailyKeysChart canvas element!');
+        return;
+    }
+    
+    const ctx = chartCanvas.getContext('2d');
+    
+    window.dailyKeysChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Keys Checked',
+                data: [],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            if (isNaN(value) || value === undefined) {
+                                return '0';
+                            }
+                            return humanFormat(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Keys Checked: ' + (isNaN(context.raw) ? '0' : humanFormat(context.raw));
+                        }
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Daily Keys Checked'
+                }
+            }
+        }
+    });
+    
+    updateDailyKeysChart();
+}
+
+// Function to create daily performance chart
+function initDailyPerformanceChart() {
+    const chartCanvas = document.getElementById('dailyPerformanceChart');
+    if (!chartCanvas) {
+        console.error('Cannot find dailyPerformanceChart canvas element!');
+        return;
+    }
+    
+    const ctx = chartCanvas.getContext('2d');
+    
+    window.dailyPerformanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Hash Rate (keys/sec)',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hash Rate (keys/sec)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            if (isNaN(value) || value === undefined) {
+                                return '0';
+                            }
+                            return value.toFixed(2);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const rate = isNaN(context.raw) ? 0 : context.raw;
+                            return 'Hash Rate: ' + rate.toFixed(2) + ' keys/sec';
+                        }
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Daily Performance'
+                }
+            }
+        }
+    });
+    
+    updateDailyPerformanceChart();
+}
+
+// Function to update the daily keys chart
+function updateDailyKeysChart() {
+    if (!window.dailyKeysChart) {
+        console.error('Daily keys chart not initialized!');
+        return;
+    }
+    
+    fetch('/api/daily-stats?_=' + new Date().getTime())
+        .then(response => response.json())
+        .then(data => {
+            if (!data.daily_stats || !Array.isArray(data.daily_stats)) {
+                console.error('Invalid daily stats data:', data);
+                return;
+            }
+            
+            // Process data for chart
+            const stats = data.daily_stats;
+            
+            // Sort by date ascending
+            stats.sort((a, b) => {
+                try {
+                    return new Date(a.date || 0) - new Date(b.date || 0);
+                } catch (e) {
+                    console.error('Error sorting dates:', e);
+                    return 0;
+                }
+            });
+            
+            // Extract data for chart
+            const labels = stats.map(item => {
+                if (!item.date) return 'Unknown';
+                try {
+                    const date = new Date(item.date);
+                    return date.toLocaleDateString();
+                } catch (e) {
+                    console.error('Invalid date:', item.date);
+                    return 'Invalid date';
+                }
+            });
+            
+            // Calculate addresses checked per day (difference from previous day)
+            const addressesChecked = [];
+            for (let i = 0; i < stats.length; i++) {
+                if (i === 0) {
+                    addressesChecked.push(Number(stats[i].addresses_checked) || 0);
+                } else {
+                    const todayChecked = Number(stats[i].addresses_checked) || 0;
+                    const yesterdayChecked = Number(stats[i-1].addresses_checked) || 0;
+                    addressesChecked.push(Math.max(0, todayChecked - yesterdayChecked));
+                }
+            }
+            
+            // Update chart data
+            window.dailyKeysChart.data.labels = labels;
+            window.dailyKeysChart.data.datasets[0].data = addressesChecked;
+            window.dailyKeysChart.update();
+        })
+        .catch(error => {
+            console.error('Error fetching daily keys stats:', error);
+        });
+}
+
+// Function to update the daily performance chart
+function updateDailyPerformanceChart() {
+    if (!window.dailyPerformanceChart) {
+        console.error('Daily performance chart not initialized!');
+        return;
+    }
+    
+    fetch('/api/daily-stats?_=' + new Date().getTime())
+        .then(response => response.json())
+        .then(data => {
+            if (!data.daily_stats || !Array.isArray(data.daily_stats)) {
+                console.error('Invalid daily stats data:', data);
+                return;
+            }
+            
+            // Process data for chart
+            const stats = data.daily_stats;
+            
+            // Sort by date ascending
+            stats.sort((a, b) => {
+                try {
+                    return new Date(a.date || 0) - new Date(b.date || 0);
+                } catch (e) {
+                    console.error('Error sorting dates:', e);
+                    return 0;
+                }
+            });
+            
+            // Extract data for chart
+            const labels = stats.map(item => {
+                if (!item.date) return 'Unknown';
+                try {
+                    const date = new Date(item.date);
+                    return date.toLocaleDateString();
+                } catch (e) {
+                    console.error('Invalid date:', item.date);
+                    return 'Invalid date';
+                }
+            });
+            
+            const hashRates = stats.map(item => {
+                const rate = Number(item.avg_hash_rate);
+                return isNaN(rate) ? 0 : rate;
+            });
+            
+            // Update chart data
+            window.dailyPerformanceChart.data.labels = labels;
+            window.dailyPerformanceChart.data.datasets[0].data = hashRates;
+            window.dailyPerformanceChart.update();
+        })
+        .catch(error => {
+            console.error('Error fetching daily performance stats:', error);
+        });
+}
+
 // Initialize dashboard
 window.addEventListener('DOMContentLoaded', () => {
     // Add initial log entry
@@ -420,16 +891,49 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, 60000); // Full refresh every minute
     
+    // Initialize charts on page load
+    window.dailyStatsChart = null;
+    window.dailyKeysChart = null;
+    window.dailyPerformanceChart = null;
+    
+    // Delay chart initialization to ensure DOM is fully loaded
+    setTimeout(() => {
+        initDailyStatsChart();
+        initDailyKeysChart();
+        initDailyPerformanceChart();
+    }, 500);
+    
     // Set up event handling for chart type switching
     if (document.getElementById('showBarChart')) {
         document.getElementById('showBarChart').addEventListener('click', function() {
+            document.getElementById('mainChart').parentElement.parentElement.style.display = 'block';
+            document.getElementById('dailyStatsContainer').style.display = 'none';
+            document.querySelector('.chart-row').style.display = 'none';
+            toggleActiveButton(this);
             addLogEntry('Switched to bar chart view');
         });
     }
     
     if (document.getElementById('showLineChart')) {
         document.getElementById('showLineChart').addEventListener('click', function() {
+            document.getElementById('mainChart').parentElement.parentElement.style.display = 'block';
+            document.getElementById('dailyStatsContainer').style.display = 'none';
+            document.querySelector('.chart-row').style.display = 'none';
+            toggleActiveButton(this);
             addLogEntry('Switched to line chart view');
+        });
+    }
+    
+    if (document.getElementById('showDailyStatsChart')) {
+        document.getElementById('showDailyStatsChart').addEventListener('click', function() {
+            document.getElementById('mainChart').parentElement.parentElement.style.display = 'none';
+            document.getElementById('dailyStatsContainer').style.display = 'block';
+            document.querySelector('.chart-row').style.display = 'flex';
+            toggleActiveButton(this);
+            updateDailyStatsChart();
+            updateDailyKeysChart();
+            updateDailyPerformanceChart();
+            addLogEntry('Switched to daily statistics view');
         });
     }
 });

@@ -57,10 +57,40 @@
                 <div class="chart-controls">
                     <button id="showBarChart" class="active"><i class="fas fa-chart-bar"></i></button>
                     <button id="showLineChart"><i class="fas fa-chart-line"></i></button>
+                    <button id="showDailyStatsChart"><i class="fas fa-calendar-alt"></i></button>
                 </div>
             </div>
             <div class="chart-wrapper">
                 <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-container" id="dailyStatsContainer" style="display: none;">
+            <div class="chart-header">
+                <h2>Daily Progress Statistics</h2>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="dailyStatsChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-row">
+            <div class="chart-container chart-half">
+                <div class="chart-header">
+                    <h2>Daily Keys Checked</h2>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="dailyKeysChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container chart-half">
+                <div class="chart-header">
+                    <h2>Daily Performance</h2>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="dailyPerformanceChart"></canvas>
+                </div>
             </div>
         </div>
 
@@ -141,7 +171,7 @@
             }
         };
         
-        const mainChart = new Chart(ctx, {
+        window.mainChart = new Chart(ctx, {
             type: chartType,
             data: chartData,
             options: chartOptions
@@ -165,8 +195,8 @@
         });
         
         function updateChartType() {
-            mainChart.destroy();
-            mainChart = new Chart(ctx, {
+            window.mainChart.destroy();
+            window.mainChart = new Chart(ctx, {
                 type: chartType,
                 data: chartData,
                 options: chartOptions
@@ -179,6 +209,9 @@
             });
             button.classList.add('active');
         }
+        
+        // Make toggleActiveButton function available globally
+        window.toggleActiveButton = toggleActiveButton;
     </script>
 </body>
 </html>
